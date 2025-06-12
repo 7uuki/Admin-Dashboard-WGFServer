@@ -10,7 +10,7 @@
     <a href="https://ci.umgefall.de" target="_blank">
       <img src="./assets/Jenkins.svg" class="logo jenkins" alt="Jenkins logo" />
     </a>
-    <a href="https://vuejs.org/" target="_blank">
+    <a href="https://docker.umgefall.de" target="_blank">
       <img src="./assets/Portainer.svg" class="logo portainer" alt="Portainer logo" />
     </a>
   </div>
