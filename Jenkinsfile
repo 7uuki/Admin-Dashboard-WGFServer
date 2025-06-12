@@ -3,10 +3,15 @@
 // Der gesamte Pipeline-Code muss in einem 'pipeline' Block gekapselt sein.
 pipeline {
     // Definiere den Agenten, auf dem der Job ausgeführt werden soll.
-    // 'any' bedeutet, dass Jenkins jeden verfügbaren Agenten nutzen kann.
-    // Wenn du einen spezifischen Agenten-Label hast (z.B. 'node-js-agent'),
-    // kannst du 'agent { label 'node-js-agent' }' verwenden.
-    agent any
+    // Hier wird ein Docker-Container mit Node.js 18 (alpine-Variante für geringe Größe) als Agent genutzt.
+    // Dies stellt sicher, dass 'npm' verfügbar ist.
+    agent {
+        docker {
+            image 'node:18-alpine'
+            // Optionale Argumente, z.B. für die Mounts von Docker-Volumes
+            // args '-v /your/host/path:/container/path'
+        }
+    }
 
     // Definiere Umgebungsvariablen, die du im Pipeline-Skript verwenden wirst.
     environment {
@@ -27,30 +32,19 @@ pipeline {
 
     // Die Pipeline-Stufen definieren die einzelnen Schritte des Jobs.
     stages {
-        // Stufe 1: Checkout des Quellcodes
-        stage('Checkout Source Code') {
-            steps {
-                echo 'Checking out source code...'
-                // Lösche den Arbeitsbereich, um sicherzustellen, dass keine alten Dateien vorhanden sind.
-                cleanWs()
-                // Klone das Git-Repository.
-                git branch: GIT_BRANCH, url: GIT_REPOSITORY_URL
-                echo 'Source code checked out successfully.'
-            }
-        }
-
-        // Stufe 2: Installation der npm-Abhängigkeiten
+        // Stufe 1: Installation der npm-Abhängigkeiten
+        // Der SCM-Checkout wird automatisch durch den 'agent docker' Block durchgeführt.
         stage('Install Dependencies') {
             steps {
                 echo 'Installing npm dependencies...'
                 // Führe 'npm install' aus, um alle Abhängigkeiten zu installieren.
-                // Stelle sicher, dass Node.js und npm auf dem Jenkins-Agenten installiert und im PATH sind.
+                // Node.js und npm sind im Docker-Image enthalten.
                 sh 'npm install'
                 echo 'npm dependencies installed.'
             }
         }
 
-        // Stufe 3: Build des Vue.js Projekts
+        // Stufe 2: Build des Vue.js Projekts
         stage('Build Vue.js Project') {
             steps {
                 echo 'Building Vue.js project...'
@@ -60,13 +54,15 @@ pipeline {
             }
         }
 
-        // Stufe 4: Verschieben der gebauten Dateien in das Zielverzeichnis
+        // Stufe 3: Verschieben der gebauten Dateien in das Zielverzeichnis
         stage('Deploy Build Artifacts') {
             steps {
                 echo "Deploying build artifacts to ${TARGET_BUILD_DIR}..."
                 // Überprüfe, ob der 'dist'-Ordner existiert, bevor er verschoben wird.
                 script {
-                    def distPath = "Admin-Dashboard-WGFServer/dist"
+                    // Der 'dist'-Ordner wird direkt im Wurzelverzeichnis des Workspaces erstellt,
+                    // da das Git-Repository dorthin geklont wird.
+                    def distPath = "dist"
                     if (fileExists(distPath)) {
                         // Erstelle das Zielverzeichnis, falls es noch nicht existiert.
                         sh "mkdir -p ${TARGET_BUILD_DIR}"
